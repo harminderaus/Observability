@@ -1,0 +1,35 @@
+{
+    "Namespace": "CWAgent",
+    "Metrics": [
+      {
+        "MetricName": "mem_used_percent",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "mem_available_percent",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "ThreadCount",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "DeadlockedThreads",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "BlockedThreads",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "ThreadCpuTime",
+        "Dimensions": "InstanceId"
+      }
+
+
+
+
+
+    ]
+  }
+  

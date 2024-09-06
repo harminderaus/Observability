@@ -1,0 +1,30 @@
+{
+    "Namespace": "AWS/EC2",
+    "Metrics": [
+      {
+        "MetricName": "CPUUtilization",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "DiskReadOps",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "DiskWriteOps",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "NetworkIn",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "NetworkOut",
+        "Dimensions": "InstanceId"
+      },
+      {
+        "MetricName": "StatusCheckFailed",
+        "Dimensions": "InstanceId"
+      }
+    ]
+  }
+  
