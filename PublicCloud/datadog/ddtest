@@ -1,0 +1,74 @@
+from datadog_api_client import ApiClient, Configuration
+from datadog_api_client.v1.api.authentication_api import AuthenticationApi
+import os
+import sys
+import logging
+
+class DatadogConnectionTester:
+    def __init__(self):
+        # Set up logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+        self.logger = logging.getLogger(__name__)
+
+    def get_credentials(self):
+        """Get Datadog credentials from environment variables."""
+        api_key = os.getenv('DD_API_KEY')
+        app_key = os.getenv('DD_APP_KEY')
+        site = os.getenv('DD_SITE', 'datadoghq.com')
+
+        if not api_key or not app_key:
+            self.logger.error("DD_API_KEY and DD_APP_KEY environment variables must be set")
+            sys.exit(1)
+
+        return api_key, app_key, site
+
+    def test_connection(self):
+        """Test connection to Datadog API."""
+        try:
+            # Get credentials
+            api_key, app_key, site = self.get_credentials()
+            
+            self.logger.info(f"Testing connection to Datadog ({site})...")
+
+            # Configure the Datadog client
+            configuration = Configuration(
+                host=f"https://api.{site}",
+                api_key={
+                    'apiKeyAuth': api_key,
+                    'appKeyAuth': app_key
+                }
+            )
+
+            # Create API client and test authentication
+            with ApiClient(configuration) as api_client:
+                auth_api = AuthenticationApi(api_client)
+                result = auth_api.validate()
+
+                if result['valid']:
+                    self.logger.info("✅ Successfully connected to Datadog!")
+                    self.logger.info(f"Authenticated as: {result['email']}")
+                    return True
+                else:
+                    self.logger.error("❌ Authentication failed!")
+                    return False
+
+        except Exception as e:
+            self.logger.error(f"❌ Connection failed: {str(e)}")
+            return False
+
+def main():
+    """Main function to run the connection test."""
+    print("\n=== Datadog Connection Tester ===\n")
+    
+    # Create and run the tester
+    tester = DatadogConnectionTester()
+    success = tester.test_connection()
+    
+    # Exit with appropriate status code
+    sys.exit(0 if success else 1)
+
+if __name__ == "__main__":
+    main()
