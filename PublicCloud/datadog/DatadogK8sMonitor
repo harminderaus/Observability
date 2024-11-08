@@ -1,0 +1,137 @@
+from datadog_api_client import ApiClient, Configuration
+from datadog_api_client.v1.api.services_api import ServicesApi
+from datadog_api_client.v2.api.services_definition_api import ServicesDefinitionApi
+import os
+from typing import Dict, List
+import logging
+
+class DatadogK8sMonitor:
+    def __init__(self, api_key: str = None, app_key: str = None):
+        """
+        Initialize the Datadog Kubernetes monitor.
+        
+        Args:
+            api_key (str): Datadog API key. If not provided, will look for DD_API_KEY env variable
+            app_key (str): Datadog Application key. If not provided, will look for DD_APP_KEY env variable
+        """
+        self.api_key = api_key or os.getenv('DD_API_KEY')
+        self.app_key = app_key or os.getenv('DD_APP_KEY')
+        
+        if not self.api_key or not self.app_key:
+            raise ValueError("Both API key and Application key are required")
+        
+        # Configure logging
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+        
+        # Initialize the Datadog client
+        self.configuration = Configuration(
+            api_key = {
+                'apiKeyAuth': self.api_key,
+                'appKeyAuth': self.app_key
+            }
+        )
+        
+    def get_k8s_services(self, cluster_name: str = None) -> List[Dict]:
+        """
+        Fetch all services running in the Kubernetes cluster.
+        
+        Args:
+            cluster_name (str): Optional cluster name to filter services
+            
+        Returns:
+            List[Dict]: List of services with their details
+        """
+        try:
+            with ApiClient(self.configuration) as api_client:
+                # Initialize the services API client
+                services_api = ServicesApi(api_client)
+                services_def_api = ServicesDefinitionApi(api_client)
+                
+                # Get all services
+                self.logger.info("Fetching services from Datadog...")
+                services = services_api.get_services()
+                
+                # Filter for Kubernetes services
+                k8s_services = []
+                
+                for service in services:
+                    try:
+                        # Get detailed service definition
+                        service_details = services_def_api.get_service_definition(
+                            service_name=service
+                        )
+                        
+                        # Check if it's a Kubernetes service
+                        if 'kubernetes' in str(service_details).lower():
+                            # If cluster name is specified, filter by it
+                            if cluster_name:
+                                if cluster_name in str(service_details):
+                                    k8s_services.append({
+                                        'name': service,
+                                        'details': service_details
+                                    })
+                            else:
+                                k8s_services.append({
+                                    'name': service,
+                                    'details': service_details
+                                })
+                    except Exception as e:
+                        self.logger.warning(f"Error fetching details for service {service}: {str(e)}")
+                        continue
+                
+                self.logger.info(f"Found {len(k8s_services)} Kubernetes services")
+                return k8s_services
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching services: {str(e)}")
+            raise
+            
+    def get_service_metrics(self, service_name: str) -> Dict:
+        """
+        Fetch metrics for a specific service.
+        
+        Args:
+            service_name (str): Name of the service to fetch metrics for
+            
+        Returns:
+            Dict: Service metrics
+        """
+        try:
+            with ApiClient(self.configuration) as api_client:
+                services_api = ServicesApi(api_client)
+                
+                # Get service metrics
+                metrics = services_api.get_service_dependencies(service_name)
+                return metrics
+                
+        except Exception as e:
+            self.logger.error(f"Error fetching metrics for service {service_name}: {str(e)}")
+            raise
+
+def main():
+    """
+    Example usage of the DatadogK8sMonitor class.
+    """
+    # Initialize the monitor
+    monitor = DatadogK8sMonitor()
+    
+    # Get all Kubernetes services
+    services = monitor.get_k8s_services()
+    
+    # Print services information
+    for service in services:
+        print(f"\nService: {service['name']}")
+        print("Details:")
+        print(service['details'])
+        
+        # Get service metrics
+        try:
+            metrics = monitor.get_service_metrics(service['name'])
+            print("Metrics:")
+            print(metrics)
+        except Exception as e:
+            print(f"Could not fetch metrics: {str(e)}")
+
+if __name__ == "__main__":
+    main()
